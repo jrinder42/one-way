@@ -11,16 +11,28 @@ final class RsyncWrapperTests: XCTestCase {
         wrapper = RsyncWrapper(processRunner: mockRunner)
     }
     
-    func testSyncCommandConstruction() async throws {
+    func testSyncCommandConstructionWithDelete() async throws {
         let source = "/source/path/"
         let destination = "/destination/path/"
         
         mockRunner.shouldSucceed = true
         
-        try await wrapper.sync(source: source, destination: destination)
+        try await wrapper.sync(source: source, destination: destination, deleteFiles: true)
         
         XCTAssertEqual(mockRunner.executedExecutableURL?.path, "/usr/bin/rsync")
         XCTAssertEqual(mockRunner.executedArguments, ["-av", "--delete", source, destination])
+    }
+    
+    func testSyncCommandConstructionWithoutDelete() async throws {
+        let source = "/source/path/"
+        let destination = "/destination/path/"
+        
+        mockRunner.shouldSucceed = true
+        
+        try await wrapper.sync(source: source, destination: destination, deleteFiles: false)
+        
+        XCTAssertEqual(mockRunner.executedExecutableURL?.path, "/usr/bin/rsync")
+        XCTAssertEqual(mockRunner.executedArguments, ["-av", source, destination])
     }
     
     func testSyncFailureThrowsError() async {

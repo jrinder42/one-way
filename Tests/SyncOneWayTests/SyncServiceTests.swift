@@ -36,11 +36,13 @@ final class SyncServiceTests: XCTestCase {
 class MockRsyncWrapper: RsyncWrapper {
     var lastSource: String?
     var lastDestination: String?
+    var lastDeleteFiles: Bool?
     var shouldFail = false
     
-    override func sync(source: String, destination: String) async throws {
+    override func sync(source: String, destination: String, deleteFiles: Bool) async throws {
         lastSource = source
         lastDestination = destination
+        lastDeleteFiles = deleteFiles
         
         if shouldFail {
             throw NSError(domain: "MockRsync", code: 1, userInfo: nil)

@@ -29,9 +29,18 @@ final class SettingsRepositoryTests: XCTestCase {
         XCTAssertEqual(repository.loadDestinationPath(), expectedPath)
     }
     
+    func testSaveAndLoadDeleteFilesPreference() {
+        repository.saveDeleteFilesAtDestination(true)
+        XCTAssertTrue(repository.loadDeleteFilesAtDestination())
+        
+        repository.saveDeleteFilesAtDestination(false)
+        XCTAssertFalse(repository.loadDeleteFilesAtDestination())
+    }
+    
     func testLoadPathsWhenEmptyReturnsNil() {
         XCTAssertNil(repository.loadSourcePath())
         XCTAssertNil(repository.loadDestinationPath())
+        XCTAssertFalse(repository.loadDeleteFilesAtDestination()) // Defaults to false
     }
 }
 
@@ -45,5 +54,9 @@ class MockUserDefaults: UserDefaultsProtocol {
     
     func string(forKey defaultName: String) -> String? {
         return storage[defaultName] as? String
+    }
+    
+    func bool(forKey defaultName: String) -> Bool {
+        return storage[defaultName] as? Bool ?? false
     }
 }
