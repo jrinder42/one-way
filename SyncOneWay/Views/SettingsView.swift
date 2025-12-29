@@ -48,7 +48,10 @@ struct SettingsView: View {
             }
         }
         .padding()
-        .frame(width: 400)
+        .frame(minWidth: 400, maxWidth: .infinity, minHeight: 250, maxHeight: .infinity)
+        .onAppear {
+            viewModel.load()
+        }
     }
     
     private func selectDirectory(completion: @escaping (String) -> Void) {
@@ -56,6 +59,9 @@ struct SettingsView: View {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
+        
+        // Ensure the panel appears on top of the floating settings window
+        panel.level = .floating
         
         if panel.runModal() == .OK {
             if let url = panel.url {
