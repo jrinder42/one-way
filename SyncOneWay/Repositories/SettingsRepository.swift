@@ -3,6 +3,7 @@ import Foundation
 protocol UserDefaultsProtocol {
     func set(_ value: Any?, forKey defaultName: String)
     func string(forKey defaultName: String) -> String?
+    func bool(forKey defaultName: String) -> Bool
 }
 
 extension UserDefaults: UserDefaultsProtocol {}
@@ -11,6 +12,7 @@ class SettingsRepository {
     private let userDefaults: UserDefaultsProtocol
     private let sourcePathKey = "sourcePath"
     private let destinationPathKey = "destinationPath"
+    private let deleteFilesAtDestinationKey = "deleteFilesAtDestination"
     
     init(userDefaults: UserDefaultsProtocol = UserDefaults.standard) {
         self.userDefaults = userDefaults
@@ -30,5 +32,13 @@ class SettingsRepository {
     
     func loadDestinationPath() -> String? {
         return userDefaults.string(forKey: destinationPathKey)
+    }
+
+    func saveDeleteFilesAtDestination(_ shouldDelete: Bool) {
+        userDefaults.set(shouldDelete, forKey: deleteFilesAtDestinationKey)
+    }
+    
+    func loadDeleteFilesAtDestination() -> Bool {
+        return userDefaults.bool(forKey: deleteFilesAtDestinationKey)
     }
 }
