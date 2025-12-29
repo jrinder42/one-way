@@ -35,6 +35,9 @@ struct SettingsView: View {
                 }
             }
             
+            Toggle("Delete files at destination if missing from source", isOn: $viewModel.shouldDeleteFiles)
+                .toggleStyle(.checkbox)
+            
             HStack {
                 Button("Cancel") {
                     dismiss()

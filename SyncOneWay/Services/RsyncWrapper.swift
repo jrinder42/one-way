@@ -25,11 +25,17 @@ class RsyncWrapper {
         self.processRunner = processRunner
     }
     
-    func sync(source: String, destination: String) async throws {
+    func sync(source: String, destination: String, deleteFiles: Bool = false) async throws {
         // -a: archive mode (preserves permissions, symlinks, etc.)
         // -v: verbose
-        // --delete: delete extraneous files from destination
-        let arguments = ["-av", "--delete", source, destination]
+        var arguments = ["-av"]
+        
+        if deleteFiles {
+            arguments.append("--delete")
+        }
+        
+        arguments.append(source)
+        arguments.append(destination)
         
         let status = try await processRunner.run(executableURL: rsyncPath, arguments: arguments)
         

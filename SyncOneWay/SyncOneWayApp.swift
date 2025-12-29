@@ -46,13 +46,23 @@ class WindowManager: NSObject, ObservableObject, NSWindowDelegate {
 @main
 struct SyncOneWayApp: App {
     @StateObject private var windowManager = WindowManager()
+    @State private var isSyncing = false
+    @State private var lastSyncStatus: String?
+    
+    private let syncService = SyncService()
     
     var body: some Scene {
-        MenuBarExtra("Sync One-Way", systemImage: "arrow.triangle.2.circlepath") {
-            Button("Sync Now") {
-                // TODO: Trigger SyncService
-                print("Sync triggered")
+        MenuBarExtra("Sync One-Way", systemImage: isSyncing ? "arrow.triangle.2.circlepath.circle.fill" : "arrow.triangle.2.circlepath") {
+            if isSyncing {
+                Text("Syncing...")
+            } else if let status = lastSyncStatus {
+                Text(status)
             }
+            
+            Button("Sync Now") {
+                triggerSync()
+            }
+            .disabled(isSyncing)
             
             Divider()
             
@@ -65,6 +75,23 @@ struct SyncOneWayApp: App {
                 NSApplication.shared.terminate(nil)
             }
             .keyboardShortcut("q")
+        }
+    }
+    
+    private func triggerSync() {
+        isSyncing = true
+        lastSyncStatus = nil
+        
+        Task {
+            do {
+                try await syncService.sync()
+                isSyncing = false
+                lastSyncStatus = "Last sync: \(Date().formatted(date: .omitted, time: .shortened))"
+            } catch {
+                isSyncing = false
+                lastSyncStatus = "Sync failed"
+                print("Sync error: \(error.localizedDescription)")
+            }
         }
     }
 }

@@ -19,11 +19,13 @@ class SyncService {
             return
         }
         
+        let shouldDelete = repository.loadDeleteFilesAtDestination()
+        
         // Ensure paths end with / for directory sync behavior if needed
         // For rsync, source/ means "contents of source"
         let normalizedSource = source.hasSuffix("/") ? source : "\(source)/"
         let normalizedDestination = destination.hasSuffix("/") ? destination : "\(destination)/"
         
-        try await rsyncWrapper.sync(source: normalizedSource, destination: normalizedDestination)
+        try await rsyncWrapper.sync(source: normalizedSource, destination: normalizedDestination, deleteFiles: shouldDelete)
     }
 }
