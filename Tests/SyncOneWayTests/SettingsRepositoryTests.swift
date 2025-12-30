@@ -59,4 +59,8 @@ class MockUserDefaults: UserDefaultsProtocol {
     func bool(forKey defaultName: String) -> Bool {
         return storage[defaultName] as? Bool ?? false
     }
+    
+    func data(forKey defaultName: String) -> Data? {
+        return storage[defaultName] as? Data
+    }
 }
