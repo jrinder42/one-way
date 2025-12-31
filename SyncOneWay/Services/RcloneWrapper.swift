@@ -10,8 +10,8 @@ class RcloneWrapper {
     
     func isRcloneAvailable() async -> Bool {
         do {
-            let status = try await processRunner.run(executableURL: rclonePath, arguments: ["--version"])
-            return status == 0
+            let result = try await processRunner.run(executableURL: rclonePath, arguments: ["--version"])
+            return result.terminationStatus == 0
         } catch {
             return false
         }
