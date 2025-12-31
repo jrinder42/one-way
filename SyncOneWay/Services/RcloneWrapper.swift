@@ -18,4 +18,8 @@ class RcloneWrapper {
             return false
         }
     }
+    
+    func sync(source: String, destination: String, remoteName: String, deleteFiles: Bool = false) async throws {
+        // To be implemented
+    }
 }
