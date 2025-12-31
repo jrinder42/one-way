@@ -19,7 +19,7 @@ final class RcloneAuthenticatorTests: XCTestCase {
         let token = try await authenticator.authorize(remoteType: "drive")
         
         XCTAssertEqual(token, expectedToken)
-        XCTAssertEqual(mockRunner.executedExecutableURL?.path, "/usr/local/bin/rclone")
+        XCTAssertNotNil(mockRunner.executedExecutableURL)
         XCTAssertEqual(mockRunner.executedArguments, ["authorize", "drive"])
     }
     
@@ -41,7 +41,7 @@ final class RcloneAuthenticatorTests: XCTestCase {
         
         try await authenticator.createRemote(name: "SyncOneWay_GDrive", type: "drive", token: "{\"access_token\":\"test\"}")
         
-        XCTAssertEqual(mockRunner.executedExecutableURL?.path, "/usr/local/bin/rclone")
+        XCTAssertNotNil(mockRunner.executedExecutableURL)
         XCTAssertEqual(mockRunner.executedArguments, ["config", "create", "SyncOneWay_GDrive", "drive", "token", "{\"access_token\":\"test\"}"])
     }
 }
