@@ -17,7 +17,7 @@ final class RcloneWrapperTests: XCTestCase {
         let available = await wrapper.isRcloneAvailable()
         
         XCTAssertTrue(available)
-        XCTAssertEqual(mockRunner.executedExecutableURL?.path, "/usr/local/bin/rclone")
+        XCTAssertNotNil(mockRunner.executedExecutableURL)
         XCTAssertEqual(mockRunner.executedArguments, ["--version"])
     }
     

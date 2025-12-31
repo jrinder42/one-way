@@ -2,16 +2,18 @@ import Foundation
 
 class RcloneWrapper {
     private let processRunner: ProcessRunnerProtocol
-    private let rclonePath = URL(fileURLWithPath: "/usr/local/bin/rclone")
+    private let rcloneURL: URL?
     
     init(processRunner: ProcessRunnerProtocol = DefaultProcessRunner()) {
         self.processRunner = processRunner
+        self.rcloneURL = BinaryLocator.find(name: "rclone")
     }
     
     func isRcloneAvailable() async -> Bool {
+        guard let rcloneURL = rcloneURL else { return false }
         do {
-            let status = try await processRunner.run(executableURL: rclonePath, arguments: ["--version"])
-            return status == 0
+            let result = try await processRunner.run(executableURL: rcloneURL, arguments: ["--version"])
+            return result.terminationStatus == 0
         } catch {
             return false
         }

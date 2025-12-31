@@ -20,10 +20,10 @@ class RsyncWrapper {
         arguments.append(source)
         arguments.append(destination)
         
-        let status = try await processRunner.run(executableURL: rsyncPath, arguments: arguments)
+        let result = try await processRunner.run(executableURL: rsyncPath, arguments: arguments)
         
-        if status != 0 {
-            throw NSError(domain: "RsyncWrapper", code: Int(status), userInfo: [NSLocalizedDescriptionKey: "rsync failed with status \(status)"])
+        if result.terminationStatus != 0 {
+            throw NSError(domain: "RsyncWrapper", code: Int(result.terminationStatus), userInfo: [NSLocalizedDescriptionKey: "rsync failed with status \(result.terminationStatus): \(result.standardError)"])
         }
     }
 }

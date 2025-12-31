@@ -5,18 +5,58 @@ import XCTest
 class MockProcessRunner: ProcessRunnerProtocol {
     var shouldSucceed = true
     var exitStatus: Int32 = 0
+    var stdout = ""
+    var stderr = ""
     
     var executedExecutableURL: URL?
     var executedArguments: [String]?
     
-    func run(executableURL: URL, arguments: [String]) async throws -> Int32 {
+    func run(executableURL: URL, arguments: [String]) async throws -> ProcessResult {
         executedExecutableURL = executableURL
         executedArguments = arguments
         
+        let status = shouldSucceed ? 0 : exitStatus
+        
+        return ProcessResult(
+            terminationStatus: status,
+            standardOutput: stdout,
+            standardError: stderr
+        )
+    }
+}
+
+class MockRcloneAuthenticator: RcloneAuthenticator {
+    var shouldSucceed = true
+    var authorizedToken = "test_token"
+    
+    var capturedRemoteType: String?
+    var capturedCreateRemoteName: String?
+    var capturedCreateRemoteType: String?
+    var capturedCreateRemoteToken: String?
+    
+    override func authorize(remoteType: String) async throws -> String {
+        capturedRemoteType = remoteType
         if shouldSucceed {
-            return 0
+            return authorizedToken
         } else {
-            return exitStatus
+            throw NSError(domain: "Mock", code: 1, userInfo: nil)
         }
+    }
+    
+    override func createRemote(name: String, type: String, token: String) async throws {
+        capturedCreateRemoteName = name
+        capturedCreateRemoteType = type
+        capturedCreateRemoteToken = token
+        if !shouldSucceed {
+            throw NSError(domain: "Mock", code: 1, userInfo: nil)
+        }
+    }
+}
+
+class MockRcloneWrapper: RcloneWrapper {
+    var available = true
+    
+    override func isRcloneAvailable() async -> Bool {
+        return available
     }
 }
