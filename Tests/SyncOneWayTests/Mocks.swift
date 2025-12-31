@@ -24,3 +24,39 @@ class MockProcessRunner: ProcessRunnerProtocol {
         )
     }
 }
+
+class MockRcloneAuthenticator: RcloneAuthenticator {
+    var shouldSucceed = true
+    var authorizedToken = "test_token"
+    
+    var capturedRemoteType: String?
+    var capturedCreateRemoteName: String?
+    var capturedCreateRemoteType: String?
+    var capturedCreateRemoteToken: String?
+    
+    override func authorize(remoteType: String) async throws -> String {
+        capturedRemoteType = remoteType
+        if shouldSucceed {
+            return authorizedToken
+        } else {
+            throw NSError(domain: "Mock", code: 1, userInfo: nil)
+        }
+    }
+    
+    override func createRemote(name: String, type: String, token: String) async throws {
+        capturedCreateRemoteName = name
+        capturedCreateRemoteType = type
+        capturedCreateRemoteToken = token
+        if !shouldSucceed {
+            throw NSError(domain: "Mock", code: 1, userInfo: nil)
+        }
+    }
+}
+
+class MockRcloneWrapper: RcloneWrapper {
+    var available = true
+    
+    override func isRcloneAvailable() async -> Bool {
+        return available
+    }
+}
