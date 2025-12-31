@@ -5,12 +5,18 @@ final class SyncServiceTests: XCTestCase {
     var syncService: SyncService!
     var mockRepository: MockSettingsRepository!
     var mockRsyncWrapper: MockRsyncWrapper!
+    var mockRcloneWrapper: MockRcloneWrapper!
     
     override func setUp() {
         super.setUp()
         mockRepository = MockSettingsRepository()
         mockRsyncWrapper = MockRsyncWrapper()
-        syncService = SyncService(repository: mockRepository, rsyncWrapper: mockRsyncWrapper)
+        mockRcloneWrapper = MockRcloneWrapper()
+        syncService = SyncService(
+            repository: mockRepository,
+            rsyncWrapper: mockRsyncWrapper,
+            rcloneWrapper: mockRcloneWrapper
+        )
     }
     
     func testSyncTriggeredWithRepositoryPaths() async throws {
@@ -30,6 +36,25 @@ final class SyncServiceTests: XCTestCase {
         try await syncService.sync()
         
         XCTAssertNil(mockRsyncWrapper.lastSource)
+    }
+    
+    func testSyncDelegatesToRcloneForRcloneProvider() async throws {
+        let remoteId = UUID()
+        let folder = WatchedFolder(
+            sourcePath: "/local/path",
+            destinationPath: "backup/path",
+            provider: .rclone,
+            remoteId: remoteId
+        )
+        
+        // Mock the repository to return a remote for this ID
+        mockRepository.rcloneRemotes = [RcloneRemote(id: remoteId, name: "MyRemote", type: "drive")]
+        
+        try await syncService.sync(folder: folder)
+        
+        XCTAssertEqual(mockRcloneWrapper.lastSource, "/local/path/")
+        XCTAssertEqual(mockRcloneWrapper.lastDestination, "backup/path/")
+        XCTAssertEqual(mockRcloneWrapper.lastRemoteName, "MyRemote")
     }
 }
 
