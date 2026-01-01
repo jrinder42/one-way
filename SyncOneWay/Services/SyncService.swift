@@ -67,7 +67,8 @@ class SyncService {
                 source: normalizedSource,
                 destination: normalizedDestination,
                 remoteName: remote.name,
-                deleteFiles: shouldDelete
+                deleteFiles: shouldDelete,
+                bandwidthLimit: nil // TODO: Add to WatchedFolder/Settings
             )
         }
     }
