@@ -24,6 +24,7 @@ final class SettingsViewModelTests: XCTestCase {
         mockRepository.destinationPath = "/repo/destination"
         mockRepository.shouldDeleteFiles = true
         mockRepository.rcloneRemotes = [RcloneRemote(name: "TestRemote", type: "drive")]
+        mockRepository.watchedFolders = [WatchedFolder(sourcePath: "/f1", destinationPath: "/d1")]
         
         let newViewModel = SettingsViewModel(
             repository: mockRepository,
@@ -36,6 +37,8 @@ final class SettingsViewModelTests: XCTestCase {
         XCTAssertTrue(newViewModel.shouldDeleteFiles)
         XCTAssertEqual(newViewModel.rcloneRemotes.count, 1)
         XCTAssertEqual(newViewModel.rcloneRemotes[0].name, "TestRemote")
+        XCTAssertEqual(newViewModel.watchedFolders.count, 1)
+        XCTAssertEqual(newViewModel.watchedFolders[0].sourcePath, "/f1")
     }
     
     func testSavingUpdatesRepository() {
@@ -43,6 +46,7 @@ final class SettingsViewModelTests: XCTestCase {
         viewModel.destinationPath = "/new/destination"
         viewModel.shouldDeleteFiles = true
         viewModel.rcloneRemotes = [RcloneRemote(name: "NewRemote", type: "drive")]
+        viewModel.watchedFolders = [WatchedFolder(sourcePath: "/new/f1", destinationPath: "/new/d1")]
         
         viewModel.save()
         
@@ -50,6 +54,7 @@ final class SettingsViewModelTests: XCTestCase {
         XCTAssertEqual(mockRepository.savedDestinationPath, "/new/destination")
         XCTAssertTrue(mockRepository.savedShouldDeleteFiles)
         XCTAssertEqual(mockRepository.savedRcloneRemotes.count, 1)
+        XCTAssertEqual(mockRepository.savedWatchedFolders.count, 1)
     }
     
     func testConnectGoogleDriveSuccess() async {
@@ -66,6 +71,24 @@ final class SettingsViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.rcloneRemotes[0].name, "SyncOneWay_GDrive")
         XCTAssertEqual(mockRepository.savedRcloneRemotes.count, 1)
     }
+    
+    func testAddFolder() {
+        viewModel.addFolder(source: "/src", destination: "dest", provider: .local)
+        
+        XCTAssertEqual(viewModel.watchedFolders.count, 1)
+        XCTAssertEqual(viewModel.watchedFolders[0].sourcePath, "/src")
+        XCTAssertEqual(mockRepository.savedWatchedFolders.count, 1)
+    }
+    
+    func testRemoveFolder() {
+        let folder = WatchedFolder(sourcePath: "/src", destinationPath: "dest")
+        viewModel.watchedFolders = [folder]
+        
+        viewModel.removeFolder(id: folder.id)
+        
+        XCTAssertTrue(viewModel.watchedFolders.isEmpty)
+        XCTAssertEqual(mockRepository.savedWatchedFolders.count, 0)
+    }
 }
 
 class MockSettingsRepository: SettingsRepository {
@@ -73,19 +96,23 @@ class MockSettingsRepository: SettingsRepository {
     var destinationPath: String?
     var shouldDeleteFiles: Bool = false
     var rcloneRemotes: [RcloneRemote] = []
+    var watchedFolders: [WatchedFolder] = []
     
     var savedSourcePath: String?
     var savedDestinationPath: String?
     var savedShouldDeleteFiles: Bool = false
     var savedRcloneRemotes: [RcloneRemote] = []
+    var savedWatchedFolders: [WatchedFolder] = []
     
     override func loadSourcePath() -> String? { return sourcePath }
     override func loadDestinationPath() -> String? { return destinationPath }
     override func loadDeleteFilesAtDestination() -> Bool { return shouldDeleteFiles }
     override func loadRcloneRemotes() -> [RcloneRemote] { return rcloneRemotes }
+    override func loadWatchedFolders() -> [WatchedFolder] { return watchedFolders }
     
     override func saveSourcePath(_ path: String) { savedSourcePath = path }
     override func saveDestinationPath(_ path: String) { savedDestinationPath = path }
     override func saveDeleteFilesAtDestination(_ shouldDelete: Bool) { savedShouldDeleteFiles = shouldDelete }
     override func saveRcloneRemotes(_ remotes: [RcloneRemote]) { savedRcloneRemotes = remotes }
+    override func saveWatchedFolders(_ folders: [WatchedFolder]) { savedWatchedFolders = folders }
 }
