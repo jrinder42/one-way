@@ -60,4 +60,22 @@ class SettingsRepository {
         }
         return []
     }
+    
+    // MARK: - Watched Folders
+    
+    private let watchedFoldersKey = "watchedFolders"
+    
+    func saveWatchedFolders(_ folders: [WatchedFolder]) {
+        if let encoded = try? JSONEncoder().encode(folders) {
+            userDefaults.set(encoded, forKey: watchedFoldersKey)
+        }
+    }
+    
+    func loadWatchedFolders() -> [WatchedFolder] {
+        if let data = userDefaults.data(forKey: watchedFoldersKey),
+           let folders = try? JSONDecoder().decode([WatchedFolder].self, from: data) {
+            return folders
+        }
+        return []
+    }
 }

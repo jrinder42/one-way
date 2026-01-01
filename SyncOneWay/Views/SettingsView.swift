@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsView: View {
     @StateObject var viewModel = SettingsViewModel()
     @Environment(\.dismiss) var dismiss
+    @State private var showAddFolder = false
     
     var body: some View {
         ScrollView {
@@ -38,6 +39,62 @@ struct SettingsView: View {
                 
                 Toggle("Delete files at destination if missing from source", isOn: $viewModel.shouldDeleteFiles)
                     .toggleStyle(.checkbox)
+                
+                Divider()
+                
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Text("Watched Folders")
+                            .font(.headline)
+                        Spacer()
+                        Button(action: { showAddFolder = true }) {
+                            Image(systemName: "plus.circle.fill")
+                                .imageScale(.large)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    
+                    if viewModel.watchedFolders.isEmpty {
+                        Text("No additional folders configured.")
+                            .foregroundColor(.secondary)
+                            .font(.caption)
+                    } else {
+                        ForEach(viewModel.watchedFolders) { folder in
+                            HStack {
+                                VStack(alignment: .leading) {
+                                    Text(folder.sourcePath)
+                                        .lineLimit(1)
+                                        .truncationMode(.middle)
+                                    HStack {
+                                        Image(systemName: "arrow.right")
+                                            .font(.caption)
+                                        if folder.provider == .rclone {
+                                            Image(systemName: "icloud.fill")
+                                                .font(.caption)
+                                        }
+                                        Text(folder.destinationPath)
+                                            .lineLimit(1)
+                                            .truncationMode(.middle)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .font(.caption)
+                                }
+                                Spacer()
+                                Button(action: { viewModel.removeFolder(id: folder.id) }) {
+                                    Image(systemName: "trash")
+                                        .foregroundColor(.red)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            .padding(8)
+                            .background(Color.gray.opacity(0.1))
+                            .cornerRadius(8)
+                        }
+                    }
+                }
+                .sheet(isPresented: $showAddFolder) {
+                    AddFolderView(viewModel: viewModel)
+                }
                 
                 Divider()
                 

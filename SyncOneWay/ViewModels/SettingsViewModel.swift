@@ -6,6 +6,7 @@ class SettingsViewModel: ObservableObject {
     @Published var destinationPath: String = ""
     @Published var shouldDeleteFiles: Bool = false
     @Published var rcloneRemotes: [RcloneRemote] = []
+    @Published var watchedFolders: [WatchedFolder] = []
     @Published var isRcloneAvailable: Bool = false
     
     private let repository: SettingsRepository
@@ -35,6 +36,7 @@ class SettingsViewModel: ObservableObject {
         destinationPath = repository.loadDestinationPath() ?? ""
         shouldDeleteFiles = repository.loadDeleteFilesAtDestination()
         rcloneRemotes = repository.loadRcloneRemotes()
+        watchedFolders = repository.loadWatchedFolders()
     }
     
     func save() {
@@ -42,6 +44,7 @@ class SettingsViewModel: ObservableObject {
         repository.saveDestinationPath(destinationPath)
         repository.saveDeleteFilesAtDestination(shouldDeleteFiles)
         repository.saveRcloneRemotes(rcloneRemotes)
+        repository.saveWatchedFolders(watchedFolders)
     }
     
     func connectGoogleDrive() async {
@@ -60,5 +63,16 @@ class SettingsViewModel: ObservableObject {
         } catch {
             print("Failed to connect Google Drive: \(error.localizedDescription)")
         }
+    }
+    
+    func addFolder(source: String, destination: String, provider: SyncProvider, remoteId: UUID? = nil) {
+        let folder = WatchedFolder(sourcePath: source, destinationPath: destination, provider: provider, remoteId: remoteId)
+        watchedFolders.append(folder)
+        repository.saveWatchedFolders(watchedFolders)
+    }
+    
+    func removeFolder(id: UUID) {
+        watchedFolders.removeAll { $0.id == id }
+        repository.saveWatchedFolders(watchedFolders)
     }
 }
