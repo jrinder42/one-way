@@ -11,11 +11,15 @@ class MockProcessRunner: ProcessRunnerProtocol {
     var executedExecutableURL: URL?
     var executedArguments: [String]?
     
-    func run(executableURL: URL, arguments: [String]) async throws -> ProcessResult {
+    func run(executableURL: URL, arguments: [String], outputHandler: ((String) -> Void)? = nil) async throws -> ProcessResult {
         executedExecutableURL = executableURL
         executedArguments = arguments
         
         let status = shouldSucceed ? 0 : exitStatus
+        
+        if let handler = outputHandler, !stdout.isEmpty {
+            handler(stdout)
+        }
         
         return ProcessResult(
             terminationStatus: status,
@@ -109,7 +113,7 @@ class MockRcloneWrapper: RcloneWrapper {
 
 
 
-    override func sync(source: String, destination: String, remoteName: String, deleteFiles: Bool = false, bandwidthLimit: String? = nil) async throws {
+    override func sync(source: String, destination: String, remoteName: String, deleteFiles: Bool = false, bandwidthLimit: String? = nil, progressHandler: ((Double) -> Void)? = nil) async throws {
 
 
 
