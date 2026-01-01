@@ -29,4 +29,60 @@ final class RcloneWrapperTests: XCTestCase {
         
         XCTAssertFalse(available)
     }
+    
+    func testSyncCallsRcloneCopyWhenDeleteFilesIsFalse() async throws {
+        mockRunner.shouldSucceed = true
+        
+        try await wrapper.sync(
+            source: "/src/",
+            destination: "dest/",
+            remoteName: "gdrive",
+            deleteFiles: false
+        )
+        
+        XCTAssertEqual(mockRunner.executedArguments?[0], "copy")
+        XCTAssertEqual(mockRunner.executedArguments?.contains("/src/"), true)
+        XCTAssertEqual(mockRunner.executedArguments?.contains("gdrive:dest/"), true)
+    }
+    
+    func testSyncCallsRcloneSyncWhenDeleteFilesIsTrue() async throws {
+        mockRunner.shouldSucceed = true
+        
+        try await wrapper.sync(
+            source: "/src/",
+            destination: "dest/",
+            remoteName: "gdrive",
+            deleteFiles: true
+        )
+        
+        XCTAssertEqual(mockRunner.executedArguments?[0], "sync")
+        XCTAssertEqual(mockRunner.executedArguments?.contains("/src/"), true)
+        XCTAssertEqual(mockRunner.executedArguments?.contains("gdrive:dest/"), true)
+    }
+    
+    func testSyncIncludesBandwidthLimitIfProvided() async throws {
+        mockRunner.shouldSucceed = true
+        
+        try await wrapper.sync(
+            source: "/src/",
+            destination: "dest/",
+            remoteName: "gdrive",
+            bandwidthLimit: "1M"
+        )
+        
+        XCTAssertEqual(mockRunner.executedArguments?.contains("--bwlimit"), true)
+        XCTAssertEqual(mockRunner.executedArguments?.contains("1M"), true)
+    }
+    
+    func testSyncIncludesProgressFlag() async throws {
+        mockRunner.shouldSucceed = true
+        
+        try await wrapper.sync(
+            source: "/src/",
+            destination: "dest/",
+            remoteName: "gdrive"
+        )
+        
+        XCTAssertEqual(mockRunner.executedArguments?.contains("-P"), true)
+    }
 }
