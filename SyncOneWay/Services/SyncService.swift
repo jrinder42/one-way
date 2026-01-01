@@ -22,19 +22,11 @@ class SyncService {
             return
         }
         
-        let shouldDelete = repository.loadDeleteFilesAtDestination()
-        
         // Legacy support: construct a temporary WatchedFolder
         // Note: For legacy sync, we treat it as local provider
         let folder = WatchedFolder(sourcePath: source, destinationPath: destination, provider: .local)
         
-        // We use the new sync(folder:) method but we need to pass the deletion preference somehow if it's not on the folder.
-        // Since we haven't added deletion to WatchedFolder yet, we rely on the repository's global setting inside sync(folder:) for now,
-        // or we strictly follow the plan which implies we should be moving towards per-folder config.
-        
-        // For this refactoring step, I'll duplicate the logic slightly or use the helper.
-        // But to pass the test `testSyncTriggeredWithRepositoryPaths`, I should use the existing logic or the new logic.
-        
+        // We use the new sync(folder:) method
         try await sync(folder: folder)
     }
     

@@ -18,7 +18,7 @@ class RcloneAuthenticator {
     
     func authorize(remoteType: String) async throws -> String {
         let url = try getRcloneURL()
-        let result = try await processRunner.run(executableURL: url, arguments: ["authorize", remoteType])
+        let result = try await processRunner.run(executableURL: url, arguments: ["authorize", remoteType], outputHandler: nil)
         
         if result.terminationStatus != 0 {
             throw NSError(domain: "RcloneAuthenticator", code: Int(result.terminationStatus), userInfo: [NSLocalizedDescriptionKey: "rclone authorize failed: \(result.standardError)"])
@@ -29,7 +29,7 @@ class RcloneAuthenticator {
     
     func createRemote(name: String, type: String, token: String) async throws {
         let url = try getRcloneURL()
-        let result = try await processRunner.run(executableURL: url, arguments: ["config", "create", name, type, "token", token])
+        let result = try await processRunner.run(executableURL: url, arguments: ["config", "create", name, type, "token", token], outputHandler: nil)
         
         if result.terminationStatus != 0 {
             throw NSError(domain: "RcloneAuthenticator", code: Int(result.terminationStatus), userInfo: [NSLocalizedDescriptionKey: "rclone config create failed: \(result.standardError)"])

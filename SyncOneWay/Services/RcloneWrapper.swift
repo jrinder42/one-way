@@ -12,14 +12,14 @@ class RcloneWrapper {
     func isRcloneAvailable() async -> Bool {
         guard let rcloneURL = rcloneURL else { return false }
         do {
-            let result = try await processRunner.run(executableURL: rcloneURL, arguments: ["--version"])
+            let result = try await processRunner.run(executableURL: rcloneURL, arguments: ["--version"], outputHandler: nil)
             return result.terminationStatus == 0
         } catch {
             return false
         }
     }
     
-    func sync(source: String, destination: String, remoteName: String, deleteFiles: Bool = false, bandwidthLimit: String? = nil) async throws {
+    func sync(source: String, destination: String, remoteName: String, deleteFiles: Bool = false, bandwidthLimit: String? = nil, progressHandler: ((Double) -> Void)? = nil) async throws {
         guard let url = rcloneURL else {
             throw NSError(domain: "RcloneWrapper", code: 2, userInfo: [NSLocalizedDescriptionKey: "rclone binary not found"])
         }
@@ -35,10 +35,28 @@ class RcloneWrapper {
         arguments.append(source)
         arguments.append("\(remoteName):\(destination)")
         
-        let result = try await processRunner.run(executableURL: url, arguments: arguments)
+        let result = try await processRunner.run(executableURL: url, arguments: arguments) { output in
+            if let progress = self.parseProgress(from: output) {
+                progressHandler?(progress)
+            }
+        }
         
         if result.terminationStatus != 0 {
             throw NSError(domain: "RcloneWrapper", code: Int(result.terminationStatus), userInfo: [NSLocalizedDescriptionKey: "rclone \(command) failed with status \(result.terminationStatus): \(result.standardError)"])
         }
+    }
+    
+    private func parseProgress(from output: String) -> Double? {
+        // Example: Transferred:   	   10.500 MiB / 10.500 MiB, 100%, 0 B/s, ETA -
+        // We look for patterns like ", 100%," or ", 15%,"
+        let pattern = ", (\\d+)%,"
+        if let regex = try? NSRegularExpression(pattern: pattern),
+           let match = regex.firstMatch(in: output, range: NSRange(output.startIndex..., in: output)) {
+            if let range = Range(match.range(at: 1), in: output),
+               let percentage = Double(output[range]) {
+                return percentage / 100.0
+            }
+        }
+        return nil
     }
 }
