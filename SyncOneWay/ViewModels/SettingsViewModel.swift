@@ -8,6 +8,7 @@ class SettingsViewModel: ObservableObject {
     @Published var rcloneRemotes: [RcloneRemote] = []
     @Published var watchedFolders: [WatchedFolder] = []
     @Published var isRcloneAvailable: Bool = false
+    @Published var isConnecting: Bool = false
     
     private let repository: SettingsRepository
     private let authenticator: RcloneAuthenticator
@@ -35,10 +36,8 @@ class SettingsViewModel: ObservableObject {
         sourcePath = repository.loadSourcePath() ?? ""
         destinationPath = repository.loadDestinationPath() ?? ""
         shouldDeleteFiles = repository.loadDeleteFilesAtDestination()
-        // Load local cache first
         rcloneRemotes = repository.loadRcloneRemotes()
         watchedFolders = repository.loadWatchedFolders()
-        // Then refresh from rclone
         refreshRemotes()
     }
     
@@ -66,20 +65,22 @@ class SettingsViewModel: ObservableObject {
                             return RcloneRemote(name: name, type: "drive")
                         }
                     }
-                    self.repository.saveRcloneRemotes(self.rcloneRemotes)
+                    // We don't save to repo here to avoid side effects during load/refresh
+                    // The user will save via the Save button
                 }
             }
         }
     }
     
     func connectGoogleDrive() async {
+        await MainActor.run { isConnecting = true }
+        defer { Task { await MainActor.run { isConnecting = false } } }
+        
         do {
             let token = try await authenticator.authorize(remoteType: "drive")
-            // Use a unique name for the remote, e.g. with a timestamp or just a standard name
             let remoteName = "SyncOneWay_GDrive"
             try await authenticator.createRemote(name: remoteName, type: "drive", token: token)
             
-            // Refresh to pick up the new remote
             refreshRemotes()
         } catch {
             print("Failed to connect Google Drive: \(error.localizedDescription)")
@@ -88,17 +89,19 @@ class SettingsViewModel: ObservableObject {
     
     func deleteRemote(name: String) async throws {
         try await rcloneWrapper.deleteRemote(name: name)
-        refreshRemotes()
+        await MainActor.run {
+            self.rcloneRemotes.removeAll { $0.name == name }
+        }
     }
     
     func addFolder(source: String, destination: String, provider: SyncProvider, remoteId: UUID? = nil) {
         let folder = WatchedFolder(sourcePath: source, destinationPath: destination, provider: provider, remoteId: remoteId)
         watchedFolders.append(folder)
-        repository.saveWatchedFolders(watchedFolders)
+        // Note: We don't call repository.save here anymore. 
+        // Changes are held in the view model until save() is called from the main Settings view.
     }
     
     func removeFolder(id: UUID) {
         watchedFolders.removeAll { $0.id == id }
-        repository.saveWatchedFolders(watchedFolders)
     }
 }

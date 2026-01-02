@@ -85,6 +85,10 @@ struct SyncOneWayApp: App {
     
     private let syncService = SyncService()
     
+    init() {
+        syncService.startMonitoring()
+    }
+    
     var body: some Scene {
         MenuBarExtra("Sync One-Way", systemImage: isSyncing ? "arrow.triangle.2.circlepath.circle.fill" : "arrow.triangle.2.circlepath") {
             if isSyncing {

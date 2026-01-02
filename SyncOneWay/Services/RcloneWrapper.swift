@@ -62,7 +62,9 @@ class RcloneWrapper {
         }
         
         arguments.append(source)
-        arguments.append("\(remoteName):\(destination)")
+        
+        let fullDestination = remoteName.isEmpty ? destination : "\(remoteName):\(destination)"
+        arguments.append(fullDestination)
         
         let result = try await processRunner.run(executableURL: url, arguments: arguments) { output in
             if let progress = self.parseProgress(from: output) {
