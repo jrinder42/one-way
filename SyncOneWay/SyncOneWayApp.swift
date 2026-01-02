@@ -2,8 +2,9 @@ import SwiftUI
 
 class WindowManager: NSObject, ObservableObject, NSWindowDelegate {
     var settingsWindow: NSWindow?
+    var addFolderWindow: NSWindow?
     
-    func openSettings() {
+    func openSettings(viewModel: SettingsViewModel) {
         if settingsWindow == nil {
             let window = NSWindow(
                 contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
@@ -27,7 +28,11 @@ class WindowManager: NSObject, ObservableObject, NSWindowDelegate {
         }
         
         // Always reset the content view to ensure fresh state (discarding cancelled changes)
-        settingsWindow?.contentView = NSHostingView(rootView: SettingsView())
+        // Inject WindowManager as environment object
+        settingsWindow?.contentView = NSHostingView(
+            rootView: SettingsView(viewModel: viewModel)
+                .environmentObject(self)
+        )
         
         // Fix 3: "Activation Sandwich" - Force app to regular policy to seize focus
         NSApp.setActivationPolicy(.regular)
@@ -36,20 +41,53 @@ class WindowManager: NSObject, ObservableObject, NSWindowDelegate {
         settingsWindow?.makeKeyAndOrderFront(nil)
     }
     
+    func openAddFolder(viewModel: SettingsViewModel) {
+        if addFolderWindow == nil {
+            let window = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 500, height: 500),
+                styleMask: [.titled, .closable, .resizable],
+                backing: .buffered,
+                defer: false
+            )
+            window.title = "Add Sync Folder"
+            window.center()
+            window.isReleasedWhenClosed = false
+            window.minSize = NSSize(width: 400, height: 400)
+            window.level = .floating
+            window.delegate = self
+            addFolderWindow = window
+        }
+        
+        addFolderWindow?.contentView = NSHostingView(rootView: AddFolderView(viewModel: viewModel))
+        addFolderWindow?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+    
     // Delegate method to handle window closing
     func windowWillClose(_ notification: Notification) {
-        // Revert to accessory (menu bar only) mode when settings window closes
-        NSApp.setActivationPolicy(.accessory)
+        // If settings window closed, revert policy if no other windows open?
+        // Ideally we check if *all* windows are closed.
+        // For simplicity, if settings window closes, we revert. 
+        // AddFolderWindow is transient.
+        
+        if let window = notification.object as? NSWindow, window == settingsWindow {
+             NSApp.setActivationPolicy(.accessory)
+        }
     }
 }
 
 @main
 struct SyncOneWayApp: App {
     @StateObject private var windowManager = WindowManager()
+    @StateObject private var settingsViewModel = SettingsViewModel()
     @State private var isSyncing = false
     @State private var lastSyncStatus: String?
     
     private let syncService = SyncService()
+    
+    init() {
+        syncService.startMonitoring()
+    }
     
     var body: some Scene {
         MenuBarExtra("Sync One-Way", systemImage: isSyncing ? "arrow.triangle.2.circlepath.circle.fill" : "arrow.triangle.2.circlepath") {
@@ -67,7 +105,7 @@ struct SyncOneWayApp: App {
             Divider()
             
             Button("Settings...") {
-                windowManager.openSettings()
+                windowManager.openSettings(viewModel: settingsViewModel)
             }
             .keyboardShortcut(",", modifiers: .command)
             
@@ -91,6 +129,11 @@ struct SyncOneWayApp: App {
                 isSyncing = false
                 lastSyncStatus = "Sync failed"
                 print("Sync error: \(error.localizedDescription)")
+            }
+            
+            // Reload settings view model to reflect status changes
+            await MainActor.run {
+                settingsViewModel.load()
             }
         }
     }

@@ -11,11 +11,15 @@ class MockProcessRunner: ProcessRunnerProtocol {
     var executedExecutableURL: URL?
     var executedArguments: [String]?
     
-    func run(executableURL: URL, arguments: [String]) async throws -> ProcessResult {
+    func run(executableURL: URL, arguments: [String], outputHandler: ((String) -> Void)? = nil) async throws -> ProcessResult {
         executedExecutableURL = executableURL
         executedArguments = arguments
         
         let status = shouldSucceed ? 0 : exitStatus
+        
+        if let handler = outputHandler, !stdout.isEmpty {
+            handler(stdout)
+        }
         
         return ProcessResult(
             terminationStatus: status,
@@ -54,9 +58,103 @@ class MockRcloneAuthenticator: RcloneAuthenticator {
 }
 
 class MockRcloneWrapper: RcloneWrapper {
+
+
+
     var available = true
+
+
+
     
+
+
+
+    var lastSource: String?
+
+
+
+    var lastDestination: String?
+
+
+
+    var lastRemoteName: String?
+
+
+
+    var lastDeleteFiles: Bool?
+
+
+
+    var lastBandwidthLimit: String?
+
+
+
+    var shouldFail = false
+
+
+
+    
+
+
+
     override func isRcloneAvailable() async -> Bool {
+
+
+
         return available
+
+
+
     }
+
+
+
+    
+
+
+
+    override func sync(source: String, destination: String, remoteName: String, deleteFiles: Bool = false, bandwidthLimit: String? = nil, progressHandler: ((Double) -> Void)? = nil) async throws {
+
+
+
+        lastSource = source
+
+
+
+        lastDestination = destination
+
+
+
+        lastRemoteName = remoteName
+
+
+
+        lastDeleteFiles = deleteFiles
+
+
+
+        lastBandwidthLimit = bandwidthLimit
+
+
+
+        
+
+
+
+        if shouldFail {
+
+
+
+            throw NSError(domain: "MockRclone", code: 1, userInfo: nil)
+
+
+
+        }
+
+
+
+    }
+
+
+
 }

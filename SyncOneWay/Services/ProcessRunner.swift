@@ -7,11 +7,11 @@ struct ProcessResult {
 }
 
 protocol ProcessRunnerProtocol {
-    func run(executableURL: URL, arguments: [String]) async throws -> ProcessResult
+    func run(executableURL: URL, arguments: [String], outputHandler: ((String) -> Void)?) async throws -> ProcessResult
 }
 
 class DefaultProcessRunner: ProcessRunnerProtocol {
-    func run(executableURL: URL, arguments: [String]) async throws -> ProcessResult {
+    func run(executableURL: URL, arguments: [String], outputHandler: ((String) -> Void)? = nil) async throws -> ProcessResult {
         let process = Process()
         process.executableURL = executableURL
         process.arguments = arguments
@@ -22,19 +22,40 @@ class DefaultProcessRunner: ProcessRunnerProtocol {
         process.standardOutput = outputPipe
         process.standardError = errorPipe
         
+        var outputString = ""
+        var errorString = ""
+        
+        if let outputHandler = outputHandler {
+            outputPipe.fileHandleForReading.readabilityHandler = { handle in
+                let data = handle.availableData
+                if data.isEmpty {
+                    handle.readabilityHandler = nil
+                } else if let str = String(data: data, encoding: .utf8) {
+                    outputString += str
+                    outputHandler(str)
+                }
+            }
+        }
+        
         try process.run()
+        
+        if outputHandler == nil {
+            let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+            outputString = String(data: outputData, encoding: .utf8) ?? ""
+        }
+        
+        let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+        errorString = String(data: errorData, encoding: .utf8) ?? ""
+        
         process.waitUntilExit()
         
-        let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-        let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-        
-        let output = String(data: outputData, encoding: .utf8) ?? ""
-        let error = String(data: errorData, encoding: .utf8) ?? ""
+        // Clean up readability handler if it was set
+        outputPipe.fileHandleForReading.readabilityHandler = nil
         
         return ProcessResult(
             terminationStatus: process.terminationStatus,
-            standardOutput: output,
-            standardError: error
+            standardOutput: outputString,
+            standardError: errorString
         )
     }
 }

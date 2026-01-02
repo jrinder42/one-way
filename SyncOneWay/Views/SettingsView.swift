@@ -1,7 +1,8 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @StateObject var viewModel = SettingsViewModel()
+    @ObservedObject var viewModel: SettingsViewModel
+    @EnvironmentObject var windowManager: WindowManager
     @Environment(\.dismiss) var dismiss
     
     var body: some View {
@@ -42,6 +43,73 @@ struct SettingsView: View {
                 Divider()
                 
                 VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Text("Watched Folders")
+                            .font(.headline)
+                        Spacer()
+                        Button(action: {
+                            windowManager.openAddFolder(viewModel: viewModel)
+                        }) {
+                            Image(systemName: "plus.circle.fill")
+                                .imageScale(.large)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    
+                    if viewModel.watchedFolders.isEmpty {
+                        Text("No additional folders configured.")
+                            .foregroundColor(.secondary)
+                            .font(.caption)
+                    } else {
+                        ForEach(viewModel.watchedFolders) { folder in
+                            HStack {
+                                VStack(alignment: .leading) {
+                                    Text(folder.sourcePath)
+                                        .lineLimit(1)
+                                        .truncationMode(.middle)
+                                    HStack {
+                                        Image(systemName: "arrow.right")
+                                            .font(.caption)
+                                        if folder.provider == .rclone {
+                                            Image(systemName: "icloud.fill")
+                                                .font(.caption)
+                                        }
+                                        Text(folder.destinationPath)
+                                            .lineLimit(1)
+                                            .truncationMode(.middle)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .font(.caption)
+                                }
+                                Spacer()
+                                
+                                if folder.lastStatus == .success {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.green)
+                                        .help("Last sync: \(folder.lastSyncDate?.formatted() ?? "Unknown")")
+                                } else if folder.lastStatus == .failure {
+                                    Image(systemName: "exclamationmark.circle.fill")
+                                        .foregroundColor(.red)
+                                        .help("Error: \(folder.lastError ?? "Unknown")")
+                                }
+                                
+                                Button(action: { viewModel.removeFolder(id: folder.id) }) {
+                                    Image(systemName: "trash")
+                                        .foregroundColor(.red)
+                                }
+                                .buttonStyle(.plain)
+                                .padding(.leading, 8)
+                            }
+                            .padding(8)
+                            .background(Color.gray.opacity(0.1))
+                            .cornerRadius(8)
+                        }
+                    }
+                }
+                
+                Divider()
+                
+                VStack(alignment: .leading, spacing: 10) {
                     Text("Cloud Integration (via rclone)")
                         .font(.headline)
                     
@@ -61,6 +129,17 @@ struct SettingsView: View {
                                         Spacer()
                                         Text(remote.type)
                                             .foregroundColor(.secondary)
+                                        
+                                        Button(action: {
+                                            Task {
+                                                try? await viewModel.deleteRemote(name: remote.name)
+                                            }
+                                        }) {
+                                            Image(systemName: "trash")
+                                                .foregroundColor(.red)
+                                        }
+                                        .buttonStyle(.plain)
+                                        .padding(.leading, 8)
                                     }
                                     .padding(8)
                                     .background(Color.gray.opacity(0.1))
