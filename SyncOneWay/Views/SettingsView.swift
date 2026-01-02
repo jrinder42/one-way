@@ -1,9 +1,9 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @StateObject var viewModel = SettingsViewModel()
+    @ObservedObject var viewModel: SettingsViewModel
+    @EnvironmentObject var windowManager: WindowManager
     @Environment(\.dismiss) var dismiss
-    @State private var showAddFolder = false
     
     var body: some View {
         ScrollView {
@@ -47,7 +47,9 @@ struct SettingsView: View {
                         Text("Watched Folders")
                             .font(.headline)
                         Spacer()
-                        Button(action: { showAddFolder = true }) {
+                        Button(action: {
+                            windowManager.openAddFolder(viewModel: viewModel)
+                        }) {
                             Image(systemName: "plus.circle.fill")
                                 .imageScale(.large)
                         }
@@ -80,20 +82,29 @@ struct SettingsView: View {
                                     .font(.caption)
                                 }
                                 Spacer()
+                                
+                                if folder.lastStatus == .success {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.green)
+                                        .help("Last sync: \(folder.lastSyncDate?.formatted() ?? "Unknown")")
+                                } else if folder.lastStatus == .failure {
+                                    Image(systemName: "exclamationmark.circle.fill")
+                                        .foregroundColor(.red)
+                                        .help("Error: \(folder.lastError ?? "Unknown")")
+                                }
+                                
                                 Button(action: { viewModel.removeFolder(id: folder.id) }) {
                                     Image(systemName: "trash")
                                         .foregroundColor(.red)
                                 }
                                 .buttonStyle(.plain)
+                                .padding(.leading, 8)
                             }
                             .padding(8)
                             .background(Color.gray.opacity(0.1))
                             .cornerRadius(8)
                         }
                     }
-                }
-                .sheet(isPresented: $showAddFolder) {
-                    AddFolderView(viewModel: viewModel)
                 }
                 
                 Divider()
@@ -118,6 +129,17 @@ struct SettingsView: View {
                                         Spacer()
                                         Text(remote.type)
                                             .foregroundColor(.secondary)
+                                        
+                                        Button(action: {
+                                            Task {
+                                                try? await viewModel.deleteRemote(name: remote.name)
+                                            }
+                                        }) {
+                                            Image(systemName: "trash")
+                                                .foregroundColor(.red)
+                                        }
+                                        .buttonStyle(.plain)
+                                        .padding(.leading, 8)
                                     }
                                     .padding(8)
                                     .background(Color.gray.opacity(0.1))

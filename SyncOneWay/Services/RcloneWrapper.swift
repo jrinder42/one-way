@@ -19,6 +19,35 @@ class RcloneWrapper {
         }
     }
     
+    func listRemotes() async throws -> [String] {
+        guard let url = rcloneURL else { return [] }
+        let result = try await processRunner.run(executableURL: url, arguments: ["listremotes"], outputHandler: nil)
+        
+        if result.terminationStatus != 0 {
+            throw NSError(domain: "RcloneWrapper", code: Int(result.terminationStatus), userInfo: [NSLocalizedDescriptionKey: "rclone listremotes failed: \(result.standardError)"])
+        }
+        
+        return result.standardOutput
+            .components(separatedBy: .newlines)
+            .compactMap { line -> String? in
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                if trimmed.isEmpty { return nil }
+                return trimmed.hasSuffix(":") ? String(trimmed.dropLast()) : trimmed
+            }
+    }
+    
+    func deleteRemote(name: String) async throws {
+        guard let url = rcloneURL else {
+            throw NSError(domain: "RcloneWrapper", code: 2, userInfo: [NSLocalizedDescriptionKey: "rclone binary not found"])
+        }
+        
+        let result = try await processRunner.run(executableURL: url, arguments: ["config", "delete", name], outputHandler: nil)
+        
+        if result.terminationStatus != 0 {
+            throw NSError(domain: "RcloneWrapper", code: Int(result.terminationStatus), userInfo: [NSLocalizedDescriptionKey: "rclone config delete failed: \(result.standardError)"])
+        }
+    }
+    
     func sync(source: String, destination: String, remoteName: String, deleteFiles: Bool = false, bandwidthLimit: String? = nil, progressHandler: ((Double) -> Void)? = nil) async throws {
         guard let url = rcloneURL else {
             throw NSError(domain: "RcloneWrapper", code: 2, userInfo: [NSLocalizedDescriptionKey: "rclone binary not found"])

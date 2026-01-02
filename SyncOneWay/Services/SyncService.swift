@@ -14,20 +14,48 @@ class SyncService {
     }
     
     func sync() async throws {
-        guard let source = repository.loadSourcePath(),
-              let destination = repository.loadDestinationPath(),
-              !source.isEmpty,
-              !destination.isEmpty else {
-            print("SyncService: Missing source or destination path. Skipping sync.")
-            return
+        // 1. Sync legacy folder if it exists
+        if let source = repository.loadSourcePath(),
+           let destination = repository.loadDestinationPath(),
+           !source.isEmpty,
+           !destination.isEmpty {
+            
+            // Legacy support: construct a temporary WatchedFolder
+            let folder = WatchedFolder(sourcePath: source, destinationPath: destination, provider: .local)
+            
+            do {
+                try await sync(folder: folder)
+            } catch {
+                print("Legacy sync failed: \(error.localizedDescription)")
+            }
         }
         
-        // Legacy support: construct a temporary WatchedFolder
-        // Note: For legacy sync, we treat it as local provider
-        let folder = WatchedFolder(sourcePath: source, destinationPath: destination, provider: .local)
+        // 2. Sync watched folders
+        var folders = repository.loadWatchedFolders()
+        var updated = false
         
-        // We use the new sync(folder:) method
-        try await sync(folder: folder)
+        for i in 0..<folders.count {
+            var folder = folders[i]
+            
+            do {
+                try await sync(folder: folder)
+                folder.lastStatus = .success
+                folder.lastSyncDate = Date()
+                folder.lastError = nil
+            } catch {
+                folder.lastStatus = .failure
+                folder.lastError = error.localizedDescription
+                folder.lastSyncDate = Date()
+                print("Failed to sync folder \(folder.id): \(error.localizedDescription)")
+            }
+            
+            folders[i] = folder
+            updated = true
+        }
+        
+        if updated {
+            repository.saveWatchedFolders(folders)
+        }
     }
     
     func sync(folder: WatchedFolder) async throws {

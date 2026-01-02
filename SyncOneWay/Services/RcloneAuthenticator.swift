@@ -24,7 +24,24 @@ class RcloneAuthenticator {
             throw NSError(domain: "RcloneAuthenticator", code: Int(result.terminationStatus), userInfo: [NSLocalizedDescriptionKey: "rclone authorize failed: \(result.standardError)"])
         }
         
-        return result.standardOutput.trimmingCharacters(in: .whitespacesAndNewlines)
+        let rawOutput = result.standardOutput
+        
+        // Extract and compact JSON token
+        guard let firstBrace = rawOutput.firstIndex(of: "{"),
+              let lastBrace = rawOutput.lastIndex(of: "}") else {
+            return rawOutput.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        
+        let jsonString = String(rawOutput[firstBrace...lastBrace])
+        
+        if let data = jsonString.data(using: .utf8),
+           let jsonObject = try? JSONSerialization.jsonObject(with: data, options: []),
+           let compactData = try? JSONSerialization.data(withJSONObject: jsonObject, options: []),
+           let compactString = String(data: compactData, encoding: .utf8) {
+            return compactString
+        }
+        
+        return jsonString
     }
     
     func createRemote(name: String, type: String, token: String) async throws {

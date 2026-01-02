@@ -35,8 +35,11 @@ class SettingsViewModel: ObservableObject {
         sourcePath = repository.loadSourcePath() ?? ""
         destinationPath = repository.loadDestinationPath() ?? ""
         shouldDeleteFiles = repository.loadDeleteFilesAtDestination()
+        // Load local cache first
         rcloneRemotes = repository.loadRcloneRemotes()
         watchedFolders = repository.loadWatchedFolders()
+        // Then refresh from rclone
+        refreshRemotes()
     }
     
     func save() {
@@ -47,6 +50,28 @@ class SettingsViewModel: ObservableObject {
         repository.saveWatchedFolders(watchedFolders)
     }
     
+    func refreshRemotes() {
+        Task {
+            guard await rcloneWrapper.isRcloneAvailable() else { return }
+            let remoteNames = try? await rcloneWrapper.listRemotes()
+            
+            await MainActor.run {
+                if let names = remoteNames {
+                    let existingRemotes = self.repository.loadRcloneRemotes()
+                    
+                    self.rcloneRemotes = names.map { name in
+                        if let existing = existingRemotes.first(where: { $0.name == name }) {
+                            return existing
+                        } else {
+                            return RcloneRemote(name: name, type: "drive")
+                        }
+                    }
+                    self.repository.saveRcloneRemotes(self.rcloneRemotes)
+                }
+            }
+        }
+    }
+    
     func connectGoogleDrive() async {
         do {
             let token = try await authenticator.authorize(remoteType: "drive")
@@ -54,15 +79,16 @@ class SettingsViewModel: ObservableObject {
             let remoteName = "SyncOneWay_GDrive"
             try await authenticator.createRemote(name: remoteName, type: "drive", token: token)
             
-            let newRemote = RcloneRemote(name: remoteName, type: "drive")
-            
-            await MainActor.run {
-                self.rcloneRemotes.append(newRemote)
-                self.repository.saveRcloneRemotes(self.rcloneRemotes)
-            }
+            // Refresh to pick up the new remote
+            refreshRemotes()
         } catch {
             print("Failed to connect Google Drive: \(error.localizedDescription)")
         }
+    }
+    
+    func deleteRemote(name: String) async throws {
+        try await rcloneWrapper.deleteRemote(name: name)
+        refreshRemotes()
     }
     
     func addFolder(source: String, destination: String, provider: SyncProvider, remoteId: UUID? = nil) {

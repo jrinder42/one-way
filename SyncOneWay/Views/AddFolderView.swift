@@ -34,6 +34,7 @@ struct AddFolderView: View {
                     if viewModel.rcloneRemotes.isEmpty {
                         Text("No Google Drive accounts connected. Please connect one in Settings.")
                             .foregroundColor(.secondary)
+                            .font(.caption)
                     } else {
                         Picker("Account", selection: $selectedRemoteId) {
                             Text("Select Account").tag(nil as UUID?)
@@ -77,7 +78,7 @@ struct AddFolderView: View {
             }
         }
         .padding()
-        .frame(width: 450, height: 350)
+        .frame(minWidth: 450, maxWidth: .infinity, minHeight: 350, maxHeight: .infinity)
     }
     
     var isAddDisabled: Bool {
